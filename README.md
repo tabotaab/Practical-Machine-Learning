@@ -1,1 +1,4 @@
-# Practical-Machine-Learning
+# Practical Machine Learning Tutorial with Python Introduction
+
+Reference: https://pythonprogramming.net
+
