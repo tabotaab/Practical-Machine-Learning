@@ -8,10 +8,16 @@ These instructions will get you a copy of the project up and running on your loc
 
 ### Prerequisites
 
-What things you need to install the software and how to install them
+What things you need to download from [OMA](https://omabrowser.org/oma/current/)
 
 ```
-Give examples
+Oma protein sequences: 
+
+https://omabrowser.org/All/oma-seqs.fa.gz
+
+Oma orthology pairs:
+
+https://omabrowser.org/All/oma-pairs.txt.gz
 ```
 
 ### Installing
