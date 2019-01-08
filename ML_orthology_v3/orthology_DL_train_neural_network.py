@@ -15,8 +15,8 @@ from Bio.Data import IUPACData
 import csv
 import numpy as np
 import tensorflow as tf
-#import dask.dataframe as dd
-#import dask.array as da
+import dask.dataframe as dd
+import dask.array as da
 
 #data_path = 'features_CENH3_DMR6_LUCA-CHLRE00002_orthologues.csv'
 #data_path = 'features_oma-seqs-viridiplantae_test-7-8.csv'
