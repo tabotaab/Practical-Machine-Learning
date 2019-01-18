@@ -10,6 +10,7 @@ from keras.layers.embeddings import Embedding
 from keras.preprocessing import sequence
 from keras.utils import to_categorical
 
+import os.path
 from Bio import SeqIO
 from Bio.Data import IUPACData 
 import csv
@@ -19,10 +20,8 @@ import dask.dataframe as dd
 import dask.array as da
 
 #data_path = 'features_CENH3_DMR6_LUCA-CHLRE00002_orthologues.csv'
-#data_path = 'features_oma-seqs-viridiplantae_test-7-8.csv'
-#data_path = 'features_oma-seqs-viridiplantae_test-4-5-6-7-8.csv'
-#data_path = 'features_oma-seqs-viridiplantae_test-4-5-6-7-8-9.csv'
-data_path = 'features_oma-seqs-viridiplantae_test-4-5-6-7-8-9-10.csv'
+data_path = 'features_oma-seqs-viridiplantae_test-3-4-5-6-7-8-9-10-11.csv'
+data_single_cluster_path = 'features_oma-seqs-viridiplantae_test-1.csv'
 
 
 
@@ -56,6 +55,22 @@ def make_dataset(in_file):
                          
     return(d_set,G,X,Y)
 
+def make_dataset_single(in_file,y_value=100000):
+    with open(in_file, 'r') as f:
+        reader = csv.reader(f, delimiter="\t")
+        # get all the rows as a list
+        d_set = list(reader)
+        # transform data into numpy array
+        d_set = np.array(d_set).astype(str)
+        
+    integer_encoded_proteins = np.array([protein2integer(seq) for seq in d_set[:,1]])
+    
+    G = d_set[:, 0]
+    X = integer_encoded_proteins
+    Y = np.full((len(d_set[:, 2]),1), int(y_value))[:,0]      
+                         
+    return(d_set,G,X,Y)
+
 def make_dataset_dask(in_file):
     data = dd.read_csv(in_file,sep='\t', header=None)
     df = data.compute().reset_index(drop=True)
@@ -71,7 +86,7 @@ def make_train_test_set_idea1(G,X,Y):
 	# here we keep 80% of random indexes in train set and the rest in test set
 	
     indices = np.random.permutation(X.shape[0])
-    train_size = int(indices.size*0.80)
+    train_size = int(indices.size*0.95)
     train_idx, test_idx = indices[:train_size], indices[train_size:]
     
     X_train, X_test = X[train_idx,], X[test_idx,]  
@@ -101,8 +116,8 @@ def make_train_test_set_idea2(G,X,Y):
     return(X_train,y_train,X_test,y_test)
     
     
-def model1(X_train_new, y_train,X_test_new, y_test,in_batch_size=100,in_epochs=10): 
-	# RNN: Recurrent Neural Networks + LSTM
+def model1(X_train_new, y_train,X_test_new, y_test,in_batch_size=100,in_epochs=10,model_json_file="model.json",model_h5_file="model.h5"): # RNN: Recurrent Neural Networks
+    # https://machinelearningmastery.com/sequence-classification-lstm-recurrent-neural-networks-python-keras/
     # create the model
     embedding_vecor_length = 4
     model = Sequential()
@@ -122,6 +137,14 @@ def model1(X_train_new, y_train,X_test_new, y_test,in_batch_size=100,in_epochs=1
     y_test_one_hot_labels = to_categorical(y_test, num_classes=n_classes)
     loss, accuracy = model.evaluate(X_test_new, y_test_one_hot_labels, verbose=0)
     print('Accuracy: %f' % (accuracy*100))
+
+    # serialize model to JSON
+    model_json = model.to_json()
+    with open(model_json_file, "w") as json_file:
+        json_file.write(model_json)
+    # serialize weights to HDF5
+    model.save_weights(model_h5_file)
+    print("Saved model to disk")
     
     return()
 
@@ -274,10 +297,7 @@ def model4(X_train_new, y_train,X_test_new, y_test,in_batch_size=100,in_epochs=1
     return()
 
 
-def model5(X_train_new, y_train,X_test_new, y_test,in_batch_size=100,in_epochs=10): # RNN: Recurrent Neural Networks
-    # LSTM only
-    
-    # Convert labels to categorical one-hot encoding  
+def model5(X_train_new, y_train,X_test_new, y_test,in_batch_size=100,in_epochs=10,model_json_file="model.json",model_h5_file="model.h5"): # RNN: Recurrent Neural Networks
     y_train_one_hot_labels = to_categorical(y_train, num_classes=n_classes)
     y_test_one_hot_labels = to_categorical(y_test, num_classes=n_classes)
 
@@ -296,6 +316,14 @@ def model5(X_train_new, y_train,X_test_new, y_test,in_batch_size=100,in_epochs=1
     # evaluate the model
     loss, accuracy = model.evaluate(X_test_new, y_test_one_hot_labels, verbose=0)
     print('Accuracy: %f' % (accuracy*100))
+    
+    # serialize model to JSON
+    model_json = model.to_json()
+    with open(model_json_file, "w") as json_file:
+        json_file.write(model_json)
+    # serialize weights to HDF5
+    model.save_weights(model_h5_file)
+    print("Saved model to disk")
     
     return()
 
@@ -379,11 +407,30 @@ def model7(X_train_new, y_train,X_test_new, y_test,in_batch_size=100,in_epochs=1
 dataset, G, X, Y = make_dataset(data_path)
 X_train,y_train,X_test,y_test = make_train_test_set_idea2(G,X,Y)
 
+if (os.path.exists(data_single_cluster_path)):
+    n_classes = int(np.amax(np.concatenate((y_train,y_test),axis=0))+1)
+    dataset, G, X, Y = make_dataset_single(data_single_cluster_path,n_classes+1)
+    X_train_s,y_train_s,X_test_s,y_test_s = make_train_test_set_idea1(G,X,Y)
+
+    X_train = np.concatenate((X_train,X_train_s),axis=0)
+    X_test = np.concatenate((X_test,X_test_s),axis=0)
+    y_train = np.concatenate((y_train,y_train_s),axis=0)
+    y_test = np.concatenate((y_test,y_test_s),axis=0)
+
 num_letters = len(list(IUPACData.extended_protein_letters)) # = 26 amino acids
 
+#  ------------- OR -------------
+#fixed_seq_length = 1000
+#  ------------- OR -------------
 #fixed_seq_length = len(max(X, key=len)) # maximum
-#fixed_seq_length = (sum(len(X[i,]) for i in range(X.shape[0]))/X.shape[0])  # average
-fixed_seq_length = 1000
+#  ------------- OR -------------
+fixed_seq_length = (sum(len(X[i,]) for i in range(X.shape[0]))/X.shape[0])  # average ~490
+#  ------------- OR -------------
+#all_length = []
+#for i in range(X.shape[0]):
+#    all_length.append(len(X[i,]))
+#fixed_seq_length = np.median(all_length)  # median ~394
+
 
 n_classes = int(np.amax(np.concatenate((y_train,y_test),axis=0))+1)
 
@@ -391,10 +438,10 @@ n_classes = int(np.amax(np.concatenate((y_train,y_test),axis=0))+1)
 X_train_new = sequence.pad_sequences(X_train, maxlen=fixed_seq_length, padding='post', truncating='post')
 X_test_new = sequence.pad_sequences(X_test, maxlen=fixed_seq_length, padding='post', truncating='post')
   
-#model1(X_train_new, y_train, X_test_new, y_test,256,10000)
+model1(X_train_new, y_train, X_test_new, y_test,256,500,"CNV_LSTM_model_3.json",model_h5_file="CNV_LSTM_model_3.h5")
 #model2(X_train_new, y_train, X_test_new, y_test,256,10000)
 #model3(X_train_new, y_train, X_test_new, y_test,256,100)
 #model4(X_train_new, y_train, X_test_new, y_test,256,50)
-#model5(X_train_new, y_train, X_test_new, y_test,256,50)
+#model5(X_train_new, y_train, X_test_new, y_test,256,500,"LSTM_model_3.json",model_h5_file="LSTM_model_3.h5")
 #model6(X_train_new, y_train, X_test_new, y_test,256,1000)
-model7(X_train_new, y_train, X_test_new, y_test,256,800,"GRU_model.json",model_h5_file="GRU_model.h5")
+#model7(X_train_new, y_train, X_test_new, y_test,256,500,"GRU_model_3.json",model_h5_file="GRU_model_3.h5")
