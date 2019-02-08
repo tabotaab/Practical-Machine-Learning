@@ -6,6 +6,8 @@ from keras.layers import LSTM
 from keras.layers import GRU
 from keras.layers.convolutional import Conv1D
 from keras.layers.convolutional import MaxPooling1D
+from keras.layers import GlobalAveragePooling1D
+from keras.layers import Dropout
 from keras.layers.embeddings import Embedding
 from keras.preprocessing import sequence
 from keras.utils import to_categorical
@@ -16,8 +18,8 @@ from Bio.Data import IUPACData
 import csv
 import numpy as np
 import tensorflow as tf
-import dask.dataframe as dd
-import dask.array as da
+#import dask.dataframe as dd
+#import dask.array as da
 
 #data_path = 'features_CENH3_DMR6_LUCA-CHLRE00002_orthologues.csv'
 data_path = 'features_oma-seqs-viridiplantae_test-3-4-5-6-7-8-9-10-11.csv'
@@ -404,6 +406,54 @@ def model7(X_train_new, y_train,X_test_new, y_test,in_batch_size=100,in_epochs=1
     
     return()
 
+def model8(X_train_new, y_train,X_test_new, y_test,in_batch_size=100,in_epochs=10,model_json_file="model.json",model_h5_file="model.h5"): # RNN: Recurrent Neural Networks
+    # https://keras.io/getting-started/sequential-model-guide/
+    # create the model
+    embedding_vecor_length = 4
+    model = Sequential()
+    model.add(Embedding(num_letters, embedding_vecor_length, input_length=fixed_seq_length))
+    model.add(Conv1D(filters=256, kernel_size=3, padding='same', activation='relu'))
+    model.add(Conv1D(filters=256, kernel_size=3, activation='relu'))
+    model.add(MaxPooling1D(3))
+    model.add(Conv1D(filters=128, kernel_size=3, activation='relu'))
+    model.add(Conv1D(filters=64, kernel_size=3, activation='relu'))
+    model.add(Conv1D(filters=32, kernel_size=3, activation='relu'))
+    model.add(Conv1D(filters=16, kernel_size=3, activation='relu'))
+    #model.add(GlobalAveragePooling1D())
+    model.add(Dropout(0.5))
+    model.add(Dense(25088, activation='relu'))
+    model.add(Dropout(0.5))
+    model.add(Dense(4096, activation='relu'))
+    model.add(Dropout(0.5))
+    model.add(Dense(128, activation='relu'))
+    model.add(Dropout(0.5))   
+    model.add(MaxPooling1D(pool_size=2))
+    model.add(LSTM(128))        
+    model.add(Dropout(0.5))
+    model.add(Dense(n_classes, activation='softmax'))
+    model.compile(loss='categorical_crossentropy',optimizer='rmsprop', metrics=['accuracy'])
+    print(model.summary())
+    
+    # Convert labels to categorical one-hot encoding & fit the model
+    y_train_one_hot_labels = to_categorical(y_train, num_classes=n_classes)
+    model.fit(X_train_new, y_train_one_hot_labels, epochs=in_epochs, batch_size=in_batch_size)
+
+    # evaluate the model
+    y_test_one_hot_labels = to_categorical(y_test, num_classes=n_classes)
+    loss, accuracy = model.evaluate(X_test_new, y_test_one_hot_labels, verbose=0)
+    print('Accuracy: %f' % (accuracy*100))
+
+    # serialize model to JSON
+    model_json = model.to_json()
+    with open(model_json_file, "w") as json_file:
+        json_file.write(model_json)
+    # serialize weights to HDF5
+    model.save_weights(model_h5_file)
+    print("Saved model to disk")
+    
+    return()
+    
+   
 dataset, G, X, Y = make_dataset(data_path)
 X_train,y_train,X_test,y_test = make_train_test_set_idea2(G,X,Y)
 
@@ -438,10 +488,11 @@ n_classes = int(np.amax(np.concatenate((y_train,y_test),axis=0))+1)
 X_train_new = sequence.pad_sequences(X_train, maxlen=fixed_seq_length, padding='post', truncating='post')
 X_test_new = sequence.pad_sequences(X_test, maxlen=fixed_seq_length, padding='post', truncating='post')
   
-model1(X_train_new, y_train, X_test_new, y_test,256,500,"CNV_LSTM_model_3.json",model_h5_file="CNV_LSTM_model_3.h5")
+#model1(X_train_new, y_train, X_test_new, y_test,256,500,"results/CNV_LSTM_model_3.json",model_h5_file="results/CNV_LSTM_model_3.h5")
 #model2(X_train_new, y_train, X_test_new, y_test,256,10000)
 #model3(X_train_new, y_train, X_test_new, y_test,256,100)
 #model4(X_train_new, y_train, X_test_new, y_test,256,50)
-#model5(X_train_new, y_train, X_test_new, y_test,256,500,"LSTM_model_3.json",model_h5_file="LSTM_model_3.h5")
+#model5(X_train_new, y_train, X_test_new, y_test,256,500,"results/LSTM_model_3.json",model_h5_file="results/LSTM_model_3.h5")
 #model6(X_train_new, y_train, X_test_new, y_test,256,1000)
-#model7(X_train_new, y_train, X_test_new, y_test,256,500,"GRU_model_3.json",model_h5_file="GRU_model_3.h5")
+#model7(X_train_new, y_train, X_test_new, y_test,256,500,"results/GRU_model_3.json",model_h5_file="results/GRU_model_3.h5")
+model8(X_train_new, y_train, X_test_new, y_test,256,500,"results/CNV_LSTM_model_4.json",model_h5_file="results/CNV_LSTM_model_4.h5")
