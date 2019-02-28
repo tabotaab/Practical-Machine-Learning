@@ -22,14 +22,15 @@ import numpy as np
 import tensorflow as tf
 #import dask.dataframe as dd
 import os.path
+import matplotlib
+matplotlib.use('Agg')
 from matplotlib import pyplot
 
-#data_path = 'features_CENH3_DMR6_LUCA-CHLRE00002_orthologues.csv'
 data_path = 'features_oma-seqs-viridiplantae_test-3-4-5-6-7-8-9-10-11.csv'
 data_single_cluster_path = 'features_oma-seqs-viridiplantae_test-1.csv'
-#data_path = 'features_oma-seqs-viridiplantae_test-9-10-11.csv'
-#data_path = 'features_oma-seqs-viridiplantae_test-11.csv'
+data_pair_cluster_path = 'features_oma-seqs-viridiplantae_test-2.csv'
 #data_single_cluster_path = 'no_single_cluster.csv'
+#data_pair_cluster_path = 'no_pair_cluster.csv'
 
 
 def protein2integer(in_seq):
@@ -124,7 +125,7 @@ def make_train_test_set_idea2(G,X,Y):
 
 
 
-def model1(X_train_new, y_train,X_test_new, y_test,in_batch_size=100,in_epochs=10,model_json_file="model.json",model_h5_file="model.h5"): # RNN: Recurrent Neural Networks
+def model1(X_train, y_train,X_test, y_test,in_batch_size=100,in_epochs=10,model_json_file="model.json",model_h5_file="model.h5"): # RNN: Recurrent Neural Networks
     # https://machinelearningmastery.com/sequence-classification-lstm-recurrent-neural-networks-python-keras/
 
     # Convert labels to categorical one-hot encoding  
@@ -153,11 +154,11 @@ def model1(X_train_new, y_train,X_test_new, y_test,in_batch_size=100,in_epochs=1
     print(model.summary())
 
     # fit the model
-    history = model.fit(X_train_new, y_train_one_hot_labels, epochs=in_epochs, batch_size=in_batch_size,validation_data=(X_test_new, y_test_one_hot_labels), verbose=1)
+    history = model.fit(X_train, y_train_one_hot_labels, epochs=in_epochs, batch_size=in_batch_size,validation_data=(X_test, y_test_one_hot_labels), verbose=1)
 
     # evaluate the model
-    train_loss, train_acc = model.evaluate(X_train_new, y_train_one_hot_labels, verbose=0)
-    test_loss, test_acc = model.evaluate(X_test_new, y_test_one_hot_labels, verbose=0)
+    train_loss, train_acc = model.evaluate(X_train, y_train_one_hot_labels, verbose=0)
+    test_loss, test_acc = model.evaluate(X_test, y_test_one_hot_labels, verbose=0)
     print('Loss     ======= Train: %.3f, Test: %.3f' % (train_loss, test_loss))
     print('Accuracy ======= Train: %.3f, Test: %.3f' % (train_acc, test_acc))
 
@@ -192,7 +193,7 @@ def model1(X_train_new, y_train,X_test_new, y_test,in_batch_size=100,in_epochs=1
 
 
 
-def model2(X_train_new, y_train,X_test_new, y_test,in_batch_size=100,in_epochs=10): # RNN: Recurrent Neural Networks
+def model2(X_train, y_train,X_test, y_test,in_batch_size=100,in_epochs=10): # RNN: Recurrent Neural Networks
     # Initializing the Sequential model from KERAS.
     model = Sequential()
 
@@ -223,11 +224,11 @@ def model2(X_train_new, y_train,X_test_new, y_test,in_batch_size=100,in_epochs=1
     print(model.summary())
 
     # fit the model
-    history = model.fit(X_train_new, y_train_one_hot_labels, epochs=in_epochs, batch_size=in_batch_size,validation_data=(X_test_new, y_test_one_hot_labels), verbose=1)
+    history = model.fit(X_train, y_train_one_hot_labels, epochs=in_epochs, batch_size=in_batch_size,validation_data=(X_test, y_test_one_hot_labels), verbose=1)
 
     # evaluate the model
-    train_loss, train_acc = model.evaluate(X_train_new, y_train_one_hot_labels, verbose=0)
-    test_loss, test_acc = model.evaluate(X_test_new, y_test_one_hot_labels, verbose=0)
+    train_loss, train_acc = model.evaluate(X_train, y_train_one_hot_labels, verbose=0)
+    test_loss, test_acc = model.evaluate(X_test, y_test_one_hot_labels, verbose=0)
     print('Loss     ======= Train: %.3f, Test: %.3f' % (train_loss, test_loss))
     print('Accuracy ======= Train: %.3f, Test: %.3f' % (train_acc, test_acc))
 
@@ -266,7 +267,7 @@ def one_hot_matrix(labels,C):
 
 
 
-def model3(X_train_new, y_train,X_test_new, y_test, batch_size =100, hm_epochs =100): # CNN: Convolutional Neural Networks
+def model3(X_train, y_train,X_test, y_test, batch_size =100, hm_epochs =100): # CNN: Convolutional Neural Networks
     # Number of nodes in each NN hidden layer
     n_nodes_hl1 = 1500
     n_nodes_hl2 = 1500
@@ -293,7 +294,7 @@ def model3(X_train_new, y_train,X_test_new, y_test, batch_size =100, hm_epochs =
 
     # Initializing NN layers
     hidden_1_layer = {'f_fum':n_nodes_hl1,
-                  'weight':tf.Variable(tf.random_normal([len(X_train_new[0]), n_nodes_hl1])),
+                  'weight':tf.Variable(tf.random_normal([len(X_train[0]), n_nodes_hl1])),
                   'bias':tf.Variable(tf.random_normal([n_nodes_hl1]))}
 
     hidden_2_layer = {'f_fum':n_nodes_hl2,
@@ -339,10 +340,10 @@ def model3(X_train_new, y_train,X_test_new, y_test, batch_size =100, hm_epochs =
             epoch_loss = 1
             
             i=0
-            while i < len(X_train_new):
+            while i < len(X_train):
                 start = i
                 end = i+batch_size
-                batch_x = np.array(X_train_new[start:end])
+                batch_x = np.array(X_train[start:end])
                 batch_y = np.array(train_y[start:end])
 
                 _, c = sess.run([optimizer, cost], feed_dict={x: batch_x,y: batch_y})
@@ -361,12 +362,12 @@ def model3(X_train_new, y_train,X_test_new, y_test, batch_size =100, hm_epochs =
         accuracy = tf.reduce_mean(tf.cast(correct, 'float'))
 
         #print("\nModel saved in path: %s " % my_model_save_path)
-        print('\nAccuracy:',accuracy.eval({x:X_test_new, y:test_y}) * 100)
+        print('\nAccuracy:',accuracy.eval({x:X_test, y:test_y}) * 100)
     return()
 
 
 
-def model4(X_train_new, y_train,X_test_new, y_test,in_batch_size=100,in_epochs=10): 
+def model4(X_train, y_train,X_test, y_test,in_batch_size=100,in_epochs=10): 
     # RNN: Recurrent Neural Networks
     
     # Convert labels to categorical one-hot encoding  
@@ -395,11 +396,11 @@ def model4(X_train_new, y_train,X_test_new, y_test,in_batch_size=100,in_epochs=1
     print(model.summary())
 
     # fit the model
-    history = model.fit(X_train_new, y_train_one_hot_labels, epochs=in_epochs, batch_size=in_batch_size,validation_data=(X_test_new, y_test_one_hot_labels), verbose=1)
+    history = model.fit(X_train, y_train_one_hot_labels, epochs=in_epochs, batch_size=in_batch_size,validation_data=(X_test, y_test_one_hot_labels), verbose=1)
 
     # evaluate the model
-    train_loss, train_acc = model.evaluate(X_train_new, y_train_one_hot_labels, verbose=0)
-    test_loss, test_acc = model.evaluate(X_test_new, y_test_one_hot_labels, verbose=0)
+    train_loss, train_acc = model.evaluate(X_train, y_train_one_hot_labels, verbose=0)
+    test_loss, test_acc = model.evaluate(X_test, y_test_one_hot_labels, verbose=0)
     print('Loss     ======= Train: %.3f, Test: %.3f' % (train_loss, test_loss))
     print('Accuracy ======= Train: %.3f, Test: %.3f' % (train_acc, test_acc))
 
@@ -427,7 +428,7 @@ def model4(X_train_new, y_train,X_test_new, y_test,in_batch_size=100,in_epochs=1
 
 
 
-def model5(X_train_new, y_train,X_test_new, y_test,in_batch_size=100,in_epochs=10,model_json_file="model.json",model_h5_file="model.h5"): # RNN: Recurrent Neural Networks
+def model5(X_train, y_train,X_test, y_test,in_batch_size=100,in_epochs=10,model_json_file="model.json",model_h5_file="model.h5"): # RNN: Recurrent Neural Networks
     # LSTM
     
     # Convert labels to categorical one-hot encoding  
@@ -461,11 +462,11 @@ def model5(X_train_new, y_train,X_test_new, y_test,in_batch_size=100,in_epochs=1
     print(model.summary())
 
     # fit the model
-    history = model.fit(X_train_new, y_train_one_hot_labels, epochs=in_epochs, batch_size=in_batch_size,validation_data=(X_test_new, y_test_one_hot_labels), verbose=1)
+    history = model.fit(X_train, y_train_one_hot_labels, epochs=in_epochs, batch_size=in_batch_size,validation_data=(X_test, y_test_one_hot_labels), verbose=1)
 
     # evaluate the model
-    train_loss, train_acc = model.evaluate(X_train_new, y_train_one_hot_labels, verbose=0)
-    test_loss, test_acc = model.evaluate(X_test_new, y_test_one_hot_labels, verbose=0)
+    train_loss, train_acc = model.evaluate(X_train, y_train_one_hot_labels, verbose=0)
+    test_loss, test_acc = model.evaluate(X_test, y_test_one_hot_labels, verbose=0)
     print('Loss     ======= Train: %.3f, Test: %.3f' % (train_loss, test_loss))
     print('Accuracy ======= Train: %.3f, Test: %.3f' % (train_acc, test_acc))
 
@@ -498,7 +499,7 @@ def model5(X_train_new, y_train,X_test_new, y_test,in_batch_size=100,in_epochs=1
 
     return()
 
-def model6(X_train_new, y_train,X_test_new, y_test,in_batch_size=100,in_epochs=10): # RNN: Recurrent Neural Networks
+def model6(X_train, y_train,X_test, y_test,in_batch_size=100,in_epochs=10): # RNN: Recurrent Neural Networks
     # GRU
     
     # Convert labels to categorical one-hot encoding  
@@ -524,11 +525,11 @@ def model6(X_train_new, y_train,X_test_new, y_test,in_batch_size=100,in_epochs=1
     print(model.summary())
 
     # fit the model
-    history = model.fit(X_train_new, y_train_one_hot_labels, epochs=in_epochs, batch_size=in_batch_size,validation_data=(X_test_new, y_test_one_hot_labels), verbose=1)
+    history = model.fit(X_train, y_train_one_hot_labels, epochs=in_epochs, batch_size=in_batch_size,validation_data=(X_test, y_test_one_hot_labels), verbose=1)
 
     # evaluate the model
-    train_loss, train_acc = model.evaluate(X_train_new, y_train_one_hot_labels, verbose=0)
-    test_loss, test_acc = model.evaluate(X_test_new, y_test_one_hot_labels, verbose=0)
+    train_loss, train_acc = model.evaluate(X_train, y_train_one_hot_labels, verbose=0)
+    test_loss, test_acc = model.evaluate(X_test, y_test_one_hot_labels, verbose=0)
     print('Loss     ======= Train: %.3f, Test: %.3f' % (train_loss, test_loss))
     print('Accuracy ======= Train: %.3f, Test: %.3f' % (train_acc, test_acc))
 
@@ -576,7 +577,7 @@ def use_model(model_json_file="model.json",model_h5_file="model.h5"):
 # In[16]:
 
 
-def model7(X_train_new, y_train,X_test_new, y_test,in_batch_size=100,in_epochs=10,model_json_file="model.json",model_h5_file="model.h5"): # RNN: Recurrent Neural Networks
+def model7(X_train, y_train,X_test, y_test,in_batch_size=100,in_epochs=10,model_json_file="model.json",model_h5_file="model.h5"): # RNN: Recurrent Neural Networks
     # GRU
     
     # Convert labels to categorical one-hot encoding  
@@ -602,11 +603,11 @@ def model7(X_train_new, y_train,X_test_new, y_test,in_batch_size=100,in_epochs=1
     print(model.summary())
 
     # fit the model
-    history = model.fit(X_train_new, y_train_one_hot_labels, epochs=in_epochs, batch_size=in_batch_size,validation_data=(X_test_new, y_test_one_hot_labels), verbose=1)
+    history = model.fit(X_train, y_train_one_hot_labels, epochs=in_epochs, batch_size=in_batch_size,validation_data=(X_test, y_test_one_hot_labels), verbose=1)
 
     # evaluate the model
-    train_loss, train_acc = model.evaluate(X_train_new, y_train_one_hot_labels, verbose=0)
-    test_loss, test_acc = model.evaluate(X_test_new, y_test_one_hot_labels, verbose=0)
+    train_loss, train_acc = model.evaluate(X_train, y_train_one_hot_labels, verbose=0)
+    test_loss, test_acc = model.evaluate(X_test, y_test_one_hot_labels, verbose=0)
     print('Loss     ======= Train: %.3f, Test: %.3f' % (train_loss, test_loss))
     print('Accuracy ======= Train: %.3f, Test: %.3f' % (train_acc, test_acc))
 
@@ -641,7 +642,7 @@ def model7(X_train_new, y_train,X_test_new, y_test,in_batch_size=100,in_epochs=1
 
 
 
-def model8(X_train_new, y_train,X_test_new, y_test,in_batch_size=100,in_epochs=10,model_json_file="model.json",model_h5_file="model.h5"): # RNN: Recurrent Neural Networks
+def model8(X_train, y_train,X_test, y_test,in_batch_size=100,in_epochs=10,model_json_file="model.json",model_h5_file="model.h5"): # RNN: Recurrent Neural Networks
     # https://keras.io/getting-started/sequential-model-guide/
 
     # Convert labels to categorical one-hot encoding  
@@ -691,11 +692,11 @@ def model8(X_train_new, y_train,X_test_new, y_test,in_batch_size=100,in_epochs=1
     print(model.summary())
 
     # fit the model
-    history = model.fit(X_train_new, y_train_one_hot_labels, epochs=in_epochs, batch_size=in_batch_size,validation_data=(X_test_new, y_test_one_hot_labels), verbose=1)
+    history = model.fit(X_train, y_train_one_hot_labels, epochs=in_epochs, batch_size=in_batch_size,validation_data=(X_test, y_test_one_hot_labels), verbose=1)
 
     # evaluate the model
-    train_loss, train_acc = model.evaluate(X_train_new, y_train_one_hot_labels, verbose=0)
-    test_loss, test_acc = model.evaluate(X_test_new, y_test_one_hot_labels, verbose=0)
+    train_loss, train_acc = model.evaluate(X_train, y_train_one_hot_labels, verbose=0)
+    test_loss, test_acc = model.evaluate(X_test, y_test_one_hot_labels, verbose=0)
     print('Loss     ======= Train: %.3f, Test: %.3f' % (train_loss, test_loss))
     print('Accuracy ======= Train: %.3f, Test: %.3f' % (train_acc, test_acc))
 
@@ -729,7 +730,7 @@ def model8(X_train_new, y_train,X_test_new, y_test,in_batch_size=100,in_epochs=1
     return()
 
 
-def model9(X_train_new, y_train,X_test_new, y_test,in_batch_size=100,in_epochs=10,model_json_file="model.json",model_h5_file="model.h5"): # RNN: Recurrent Neural Networks
+def model9(X_train, y_train,X_test, y_test,in_batch_size=100,in_epochs=10,model_json_file="model.json",model_h5_file="model.h5"): # RNN: Recurrent Neural Networks
     # https://keras.io/getting-started/sequential-model-guide/
 
     # Convert labels to categorical one-hot encoding  
@@ -779,11 +780,11 @@ def model9(X_train_new, y_train,X_test_new, y_test,in_batch_size=100,in_epochs=1
     print(model.summary())
 
     # fit the model
-    history = model.fit(X_train_new, y_train_one_hot_labels, epochs=in_epochs, batch_size=in_batch_size,validation_data=(X_test_new, y_test_one_hot_labels), verbose=1)
+    history = model.fit(X_train, y_train_one_hot_labels, epochs=in_epochs, batch_size=in_batch_size,validation_data=(X_test, y_test_one_hot_labels), verbose=1)
 
     # evaluate the model
-    train_loss, train_acc = model.evaluate(X_train_new, y_train_one_hot_labels, verbose=0)
-    test_loss, test_acc = model.evaluate(X_test_new, y_test_one_hot_labels, verbose=0)
+    train_loss, train_acc = model.evaluate(X_train, y_train_one_hot_labels, verbose=0)
+    test_loss, test_acc = model.evaluate(X_test, y_test_one_hot_labels, verbose=0)
     print('Loss     ======= Train: %.3f, Test: %.3f' % (train_loss, test_loss))
     print('Accuracy ======= Train: %.3f, Test: %.3f' % (train_acc, test_acc))
 
@@ -818,7 +819,7 @@ def model9(X_train_new, y_train,X_test_new, y_test,in_batch_size=100,in_epochs=1
 
 
 
-def model10(X_train_new, y_train,X_test_new, y_test,in_batch_size=100,in_epochs=10,model_json_file="model.json",model_h5_file="model.h5"): # RNN: Recurrent Neural Networks
+def model10(X_train, y_train,X_test, y_test,in_batch_size=100,in_epochs=10,model_json_file="model.json",model_h5_file="model.h5"): # RNN: Recurrent Neural Networks
     # LSTM
     
     # Convert labels to categorical one-hot encoding  
@@ -848,11 +849,11 @@ def model10(X_train_new, y_train,X_test_new, y_test,in_batch_size=100,in_epochs=
     print(model.summary())
 
     # fit the model
-    history = model.fit(X_train_new, y_train_one_hot_labels, epochs=in_epochs, batch_size=in_batch_size,validation_data=(X_test_new, y_test_one_hot_labels), verbose=1)
+    history = model.fit(X_train, y_train_one_hot_labels, epochs=in_epochs, batch_size=in_batch_size,validation_data=(X_test, y_test_one_hot_labels), verbose=1)
 
     # evaluate the model
-    train_loss, train_acc = model.evaluate(X_train_new, y_train_one_hot_labels, verbose=0)
-    test_loss, test_acc = model.evaluate(X_test_new, y_test_one_hot_labels, verbose=0)
+    train_loss, train_acc = model.evaluate(X_train, y_train_one_hot_labels, verbose=0)
+    test_loss, test_acc = model.evaluate(X_test, y_test_one_hot_labels, verbose=0)
     print('Loss     ======= Train: %.3f, Test: %.3f' % (train_loss, test_loss))
     print('Accuracy ======= Train: %.3f, Test: %.3f' % (train_acc, test_acc))
 
@@ -886,46 +887,54 @@ def model10(X_train_new, y_train,X_test_new, y_test,in_batch_size=100,in_epochs=
     return()
     
    
+# clusters with 3 or more members are added to trian set (all-1 members) and test set (1 member)
 dataset, G, X, Y = make_dataset(data_path)
 X_train,y_train,X_test,y_test = make_train_test_set_idea2(G,X,Y)
 
+# clusters with 2 members are only added to trian set
+if (os.path.exists(data_pair_cluster_path)):
+    dataset, G, X, Y = make_dataset(data_pair_cluster_path)
+    X_train = np.concatenate((X_train,X),axis=0)
+    y_train = np.concatenate((y_train,Y),axis=0)
+
+# clusters with 1 member are added to trian set (% based) and test set (% based) under 1 cluster
 if (os.path.exists(data_single_cluster_path)):
     n_classes = int(np.amax(np.concatenate((y_train,y_test),axis=0))+1)
     dataset, G, X, Y = make_dataset_single(data_single_cluster_path,n_classes+1)
-    X_train_s,y_train_s,X_test_s,y_test_s = make_train_test_set_idea1(G,X,Y)
+    X_train_1,y_train_1,X_test_1,y_test_1 = make_train_test_set_idea1(G,X,Y)
+    X_train = np.concatenate((X_train,X_train_1),axis=0)
+    X_test = np.concatenate((X_test,X_test_1),axis=0)
+    y_train = np.concatenate((y_train,y_train_1),axis=0)
+    y_test = np.concatenate((y_test,y_test_1),axis=0)
 
-    X_train = np.concatenate((X_train,X_train_s),axis=0)
-    X_test = np.concatenate((X_test,X_test_s),axis=0)
-    y_train = np.concatenate((y_train,y_train_s),axis=0)
-    y_test = np.concatenate((y_test,y_test_s),axis=0)
 
 num_letters = len(list(IUPACData.extended_protein_letters)) # = 26 amino acids
 
 #  ------------- OR -------------
-#fixed_seq_length = 1000
+fixed_seq_length = 1000
 #  ------------- OR -------------
-#fixed_seq_length = len(max(X, key=len)) # maximum
+#fixed_seq_length = len(max(X_train, key=len)) # maximum ~7926
 #  ------------- OR -------------
-fixed_seq_length = (sum(len(X[i,]) for i in range(X.shape[0]))/X.shape[0])  # average ~490
+#fixed_seq_length = int(sum(len(X_train[i,]) for i in range(X_train.shape[0]))/X_train.shape[0])  # average ~478
 #  ------------- OR -------------
 #all_length = []
-#for i in range(X.shape[0]):
-#    all_length.append(len(X[i,]))
-#fixed_seq_length = np.median(all_length)  # median ~394
+#for i in range(X_train.shape[0]):
+#    all_length.append(len(X_train[i,]))
+#fixed_seq_length = int(np.median(all_length))  # median ~386
 
 
 n_classes = int(np.amax(np.concatenate((y_train,y_test),axis=0))+1)
 
 # truncate and pad input sequences
-X_train_new = sequence.pad_sequences(X_train, maxlen=fixed_seq_length, padding='post', truncating='post')
-X_test_new = sequence.pad_sequences(X_test, maxlen=fixed_seq_length, padding='post', truncating='post')
+X_train_padded = sequence.pad_sequences(X_train, maxlen=fixed_seq_length, padding='post', truncating='post')
+X_test_padded = sequence.pad_sequences(X_test, maxlen=fixed_seq_length, padding='post', truncating='post')
   
-#model1(X_train_new, y_train, X_test_new, y_test,256,500,"results/CNV_LSTM_model_3.json",model_h5_file="results/CNV_LSTM_model_3.h5")
-#model2(X_train_new, y_train, X_test_new, y_test,256,10000)
-#model3(X_train_new, y_train, X_test_new, y_test,256,100)
-#model4(X_train_new, y_train, X_test_new, y_test,256,50)
-#model5(X_train_new, y_train, X_test_new, y_test,1024,200,"results/LSTM_model_5.json",model_h5_file="results/LSTM_model_5.h5")
-#model6(X_train_new, y_train, X_test_new, y_test,256,1000)
-#model7(X_train_new, y_train, X_test_new, y_test,256,500,"results/GRU_model_3.json",model_h5_file="results/GRU_model_3.h5")
-#model8(X_train_new, y_train, X_test_new, y_test,1024,500,"results/CNV_LSTM_model_4.json",model_h5_file="results/CNV_LSTM_model_4.h5")
-model10(X_train_new, y_train, X_test_new, y_test,1024,500,"results/CNV_LSTM_model_5.json",model_h5_file="results/CNV_LSTM_model_5.h5")
+#model1(X_train_padded, y_train, X_test_padded, y_test,256,500,"results/CNV_LSTM_model_3.json",model_h5_file="results/CNV_LSTM_model_3.h5")
+#model2(X_train_padded, y_train, X_test_padded, y_test,1024,10)
+#model3(X_train_padded, y_train, X_test_padded, y_test,256,100)
+#model4(X_train_padded, y_train, X_test_padded, y_test,256,50)
+#model5(X_train_padded, y_train, X_test_padded, y_test,1024,200,"results/LSTM_model_5.json",model_h5_file="results/LSTM_model_5.h5")
+#model6(X_train_padded, y_train, X_test_padded, y_test,256,1000)
+#model7(X_train_padded, y_train, X_test_padded, y_test,256,500,"results/GRU_model_3.json",model_h5_file="results/GRU_model_3.h5")
+#model8(X_train_padded, y_train, X_test_padded, y_test,1024,500,"results/CNV_LSTM_model_4.json",model_h5_file="results/CNV_LSTM_model_4.h5")
+model10(X_train_padded, y_train, X_test_padded, y_test,1024,500,"results/CNV_LSTM_model_6.json",model_h5_file="results/CNV_LSTM_model_6.h5")
